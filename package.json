@@ -1,0 +1,103 @@
+{
+    "author": "thaoh@hotmail.com",
+    "dependencies": {},
+    "keywords": [],
+    "name": "next-train",
+    "pebble": {
+        "capabilities": [
+            "configurable"
+        ],
+        "displayName": "Next Train",
+        "enableMultiJS": false,
+        "messageKeys": {
+            "KEY_ARRIVE_TIME": 7,
+            "KEY_DELAY": 6,
+            "KEY_DEPART_TIME": 5,
+            "KEY_RECORDS": 9,
+            "KEY_SCHEDULE": 10,
+            "KEY_STATION1": 1,
+            "KEY_STATION2": 2,
+            "KEY_STATION3": 3,
+            "KEY_TRAIN_LINE": 4,
+            "KEY_TRAIN_NO": 8
+        },
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/septa_logo_28.png",
+                    "menuIcon": true,
+                    "name": "septa_logo_28",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/train_nav_connect_2.png ",
+                    "name": "IMAGE_TRAIN_NAV_CONNECT_2",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/train_nav_connect_1.png ",
+                    "name": "IMAGE_TRAIN_NAV_CONNECT_1",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/train_bar_2.png",
+                    "name": "IMAGE_TRAIN_BAR",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/train_nav_refresh.png",
+                    "name": "IMAGE_TRAIN_NAV_REFRESH",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/train_nav_schedule.png",
+                    "name": "IMAGE_TRAIN_NAV_SCHEDULE",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/septa_logo.png",
+                    "name": "IMAGE_SEPTA_LOGO",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/background.png",
+                    "name": "IMAGE_BACKGROUND",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "characterRegex": "[0-9:m ]",
+                    "file": "fonts/white-rabbit.ttf",
+                    "name": "FONT_WHITE_RABBIT_60",
+                    "targetPlatforms": null,
+                    "type": "font"
+                },
+                {
+                    "characterRegex": "[0-9: ]",
+                    "file": "fonts/white-rabbit.ttf",
+                    "name": "FONT_WHITE_RABBIT_48",
+                    "targetPlatforms": null,
+                    "type": "font"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt"
+        ],
+        "uuid": "f7ead309-34af-45ff-bee2-35fd286044fa",
+        "watchapp": {
+            "watchface": false
+        }
+    },
+    "version": "1.0.0"
+}
