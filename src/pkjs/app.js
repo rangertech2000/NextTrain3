@@ -130,7 +130,7 @@ Pebble.addEventListener('ready',
 		console.log("PebbleKit JS ready!");
 
 		// Get the initial train info
-		// getTrainInfo();
+		//getTrainInfo();
 	}
 );
 

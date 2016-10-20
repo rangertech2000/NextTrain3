@@ -1,4 +1,4 @@
-//v2.5.
+//v3.0
 #include <pebble.h>
 
 typedef enum {
@@ -33,16 +33,7 @@ static char *p_departStation;
 static char *p_arriveStation;
 static char *p_connectStation;
 int mins_left;
-  
-// Main window
-static Window *s_main_window;
-static BitmapLayer *s_background_layer;
-static TextLayer *s_time_layer;
-static TextLayer *title_layer;
-static TextLayer *station1_layer;
-static TextLayer *station2_layer;
-static BitmapLayer *s_septa_logo_layer;
-static TextLayer *s_date_layer;
+ 
 
 // Train info window
 static Window *s_trainInfo_window;
@@ -60,6 +51,7 @@ static TextLayer *s_train_number_layer;
 static TextLayer *s_train_arriveConnect_layer;
 static TextLayer *s_train_station2_layer;
 static BitmapLayer *s_train_nav_up_layer;
+static BitmapLayer *s_train_nav_select_layer;
 static BitmapLayer *s_train_nav_down_layer;
 
 // Train schedule window
@@ -68,7 +60,6 @@ static ScrollLayer *s_trainSchedule_scroll_layer;
 static TextLayer *s_trainSchedule_text_layer;
 static TextLayer *s_trainSchedule_title_layer;
 
-static GFont s_time_font_48;
 static GFont s_time_font_60;
 
 int getMinutesLeft(char *pTrainDeparts, int delay){
@@ -135,14 +126,15 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 	Tuple *station3_tuple = dict_find(iterator, get_app_key(KEY_STATION3));
 	Tuple *depart_tuple = dict_find(iterator, get_app_key(KEY_DEPART_TIME));
 	Tuple *delay_tuple = dict_find(iterator, get_app_key(KEY_DELAY));
-	Tuple *arrive_tuple = dict_find(iterator, get_app_key(KEY_ARRIVE_TIME));
+	//Tuple *arrive_tuple = dict_find(iterator, get_app_key(KEY_ARRIVE_TIME));
 	Tuple *line_tuple = dict_find(iterator, get_app_key(KEY_TRAIN_LINE));
 	Tuple *train_tuple = dict_find(iterator, get_app_key(KEY_TRAIN_NO));
 	Tuple *schedule_tuple = dict_find(iterator, get_app_key(KEY_SCHEDULE));
 	
-	// If station data is available, use it
+	// If station config data is available, use it
 	if (station1_tuple && station2_tuple) {
-		printf("Station name tuples are available");
+		printf("Inbox: station config data returned");
+		
 		static char station1_buffer[32];
 		static char station2_buffer[32];
 		
@@ -161,11 +153,12 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 		//window_stack_push(s_trainInfo_window, false);
 	} 
 	else {
-		printf("Station name tuples are not available");
+		printf("Inbox: No station config data returned");
 	}
 	
 	// If train data is available, use it
 	if (depart_tuple && delay_tuple) {
+		printf("Inbox: Train data returned");
 		
 		static char train_line_buffer[32];
 		snprintf(train_line_buffer, sizeof(train_line_buffer), "%s", line_tuple->value->cstring);
@@ -211,7 +204,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 		text_layer_set_text(s_train_number_layer, train_number_buffer);
 		text_layer_set_text(s_train_station2_layer, p_arriveStation);
 	}
-	
+	else {
+		printf("Inbox: No train data returned");
+	}
+		
 	// If there is a connection
 	if (station3_tuple) { 
 		static char station3_buffer[32];
@@ -225,9 +221,13 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 		bitmap_layer_set_bitmap(s_train_nav_down_layer, gbitmap_create_with_resource(RESOURCE_ID_IMAGE_TRAIN_NAV_CONNECT_1));
 	
 	}
+	// Refresh the window
+	//window_stack_push(s_trainInfo_window, false);
 	
 	// If schedule is available, use it
 	if (schedule_tuple) {
+		printf("Inbox: Schedule data returned");
+		
 		static char train_line_buffer[62];
 		static char schedule_buffer[512];
 		
@@ -245,6 +245,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 		text_layer_set_size(s_trainSchedule_text_layer, max_size);
 		scroll_layer_set_content_size(s_trainSchedule_scroll_layer, GSize(144, max_size.h + 20));
 	}
+	else {
+		printf("Inbox: No schedule data returned");
+	}
+		
 }
 
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
@@ -265,14 +269,8 @@ static void update_time() {
   
 	// Write the current hours and minutes into a buffer
 	static char s_time_buffer[8];
-	static char s_date_buffer[11];
 	strftime(s_time_buffer, sizeof(s_time_buffer), clock_is_24h_style() ? "%H:%M" : "%I:%M", tick_time);
-	strftime(s_date_buffer, sizeof(s_date_buffer), "%a %b %d", tick_time);
 
-	// Display this time on the main window
-	text_layer_set_text(s_time_layer, s_time_buffer);
-	text_layer_set_text(s_date_layer, s_date_buffer);
-	
 	// Display this time on the train info window
 	if (window_stack_contains_window(s_trainInfo_window)) {
 		text_layer_set_text(s_train_time_layer, s_time_buffer);
@@ -318,46 +316,37 @@ static int mins_elapsed;
 	}  
 }
 
-void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
-	printf("%s \n", "DOWN button clicked");
 
-	p_departStation = station2;
-	p_arriveStation = station1;
-
-	fetchData(p_departStation, p_arriveStation, 1);
-
-	window_stack_push(s_trainInfo_window, false);
-	//Window *window = (Window *)context;
-}
-void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
-	printf("%s \n", "UP button clicked");
-
-	p_departStation = station1;
-	p_arriveStation = station2;
-
-	fetchData(p_departStation, p_arriveStation, 1);
-
-	window_stack_push(s_trainInfo_window, false);
-	//Window *window = (Window *)context;
-}
-void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {
-	//... called on single click, and every 1000ms of being held ...
-	printf("%s \n", "SELECT button clicked");
-	//Window *window = (Window *)context;
-}  
-
-void config_provider(Window *window) {
-	// single click / repeat-on-hold config:
-	window_single_click_subscribe(BUTTON_ID_DOWN, down_single_click_handler);
-	window_single_click_subscribe(BUTTON_ID_UP, up_single_click_handler);
-	window_single_repeating_click_subscribe(BUTTON_ID_SELECT, 1000, select_single_click_handler);
-}
-
+void train_select_click_handler(ClickRecognizerRef recognizer, void *context) {
+	if (p_departStation != p_connectStation) {
+	
+		vibes_short_pulse();
+		
+		//Change train direction
+		static char *p_tempStation;
+		p_tempStation = station1;
+		station1 = station2;
+		station2 = p_tempStation;
+		p_departStation = station1;
+		p_arriveStation = station2;
+/*			
+		// Debug:
+		printf("\n %s", "SELECT button clicked. Reversing travel direction.");
+		printf("p_tempStation: %s", p_tempStation);
+		printf("station1: %s", station1);
+		printf("station2: %s", station2);
+*/
+		fetchData(p_departStation, p_arriveStation, 1);
+	}	
+} 
 void train_up_click_handler(ClickRecognizerRef recognizer, void *context) {
+/*			
+	// Debug:
+	printf("\n %s", "UP button clicked.");	
 	printf("p_departStation: %s", p_departStation);
 	printf("p_connectStation: %s", p_connectStation);
 	printf("p_arriveStation: %s", p_arriveStation);
-
+*/
 	if (p_departStation == station1 || p_departStation == station2) {
 		fetchData(p_departStation, p_arriveStation, 20);
 		
@@ -373,16 +362,14 @@ void train_up_click_handler(ClickRecognizerRef recognizer, void *context) {
 		fetchData(p_departStation, p_arriveStation, 1);
 	}
 }
-void train_select_click_handler(ClickRecognizerRef recognizer, void *context) {
-	printf("%s \n", "SELECT button clicked");
-	vibes_short_pulse();
-	fetchData(p_departStation, p_arriveStation, 1);
-} 
 void train_down_click_handler(ClickRecognizerRef recognizer, void *context) {
+/*			
+	// Debug:
+	printf("\n %s", "DOWN button clicked.");	
 	printf("p_departStation: %s", p_departStation);
 	printf("p_connectStation: %s", p_connectStation);
 	printf("p_arriveStation: %s", p_arriveStation);
-	
+*/	
 	if (p_connectStation){
 		if (p_departStation == station1 || p_departStation == station2) {
 			p_departStation = p_connectStation;
@@ -406,83 +393,6 @@ void train_window_config_provider(Window *window) {
 	window_single_click_subscribe(BUTTON_ID_DOWN, train_down_click_handler);
 } 
 
-
-static void main_window_load(Window *window) {
-	// Get information about the Window
-	Layer *window_layer = window_get_root_layer(window);
-	//window_set_background_color(window, GColorWhite);
-	GRect bounds = layer_get_bounds(window_layer);
-
-	// Create background image layer
-	s_background_layer = bitmap_layer_create(GRect(0, 0, 144, 168));
-	bitmap_layer_set_bitmap(s_background_layer, gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BACKGROUND));
-	//bitmap_layer_set_background_color(s_background_layer, GColorClear);
-	bitmap_layer_set_compositing_mode(s_background_layer, GCompOpSet);
-	
-	// Create Septa logo layer
-	s_septa_logo_layer = bitmap_layer_create(
-	  GRect(PBL_IF_ROUND_ELSE(35, 46), PBL_IF_ROUND_ELSE(10, 8), 36, 27));
-	bitmap_layer_set_bitmap(s_septa_logo_layer, gbitmap_create_with_resource(RESOURCE_ID_IMAGE_SEPTA_LOGO));
-	bitmap_layer_set_background_color(s_septa_logo_layer, GColorClear);
-	
-	// Create the title layer
-	title_layer = text_layer_create(GRect(5, 0, 35, 36));
-	text_layer_set_font(title_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
-	text_layer_set_background_color(title_layer, GColorClear);
-	text_layer_set_text_alignment(title_layer, GTextAlignmentRight);
-	text_layer_set_text_color(title_layer, GColorBlack);
-	text_layer_set_text(title_layer, "Next\nTrain");
-	
-	// Create GFont
-	s_time_font_48 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_WHITE_RABBIT_48));  
-	// Create the time layer
-	s_time_layer = text_layer_create(
-	GRect(0, PBL_IF_ROUND_ELSE(58, 52), bounds.size.w, 50));
-	text_layer_set_background_color(s_time_layer, GColorClear);
-	text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
-	text_layer_set_text_color(s_time_layer, GColorBlack);
-	text_layer_set_text(s_time_layer, "00:00");
-	text_layer_set_font(s_time_layer, s_time_font_48);
-
-	station1_layer = text_layer_create(GRect(0, 46, 144, 20));
-	text_layer_set_background_color(station1_layer, GColorClear);
-	text_layer_set_text_alignment(station1_layer, GTextAlignmentCenter);
-	text_layer_set_text_color(station1_layer, GColorWhite);
-	text_layer_set_text(station1_layer, station1);
-	
-	station2_layer = text_layer_create(GRect(0, 103, 144, 20));
-	text_layer_set_background_color(station2_layer, GColorClear);
-	text_layer_set_text_alignment(station2_layer, GTextAlignmentCenter);
-	text_layer_set_text_color(station2_layer, GColorWhite);
-	text_layer_set_text(station2_layer, station2);
-	
-	// Date layer
-  	s_date_layer = text_layer_create(GRect(0, 150, 144, 18));
-	text_layer_set_font(s_date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
- 	text_layer_set_background_color(s_date_layer, GColorClear);
-	text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
-	text_layer_set_text_color(s_date_layer, GColorBlack);
-  	//text_layer_set_text(s_date_layer, "Date");
-  	
-
-	// Add it as a child layer to the Window's root layer
-	layer_add_child(window_layer, bitmap_layer_get_layer(s_background_layer));
-	layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
-	layer_add_child(window_layer, text_layer_get_layer(title_layer));
-	layer_add_child(window_layer, text_layer_get_layer(station1_layer));
-	layer_add_child(window_layer, text_layer_get_layer(station2_layer));
-	layer_add_child(window_layer, bitmap_layer_get_layer(s_septa_logo_layer));
-	layer_add_child(window_layer, (Layer *)s_date_layer);
-}
-
-static void main_window_unload(Window *window) {
-	bitmap_layer_destroy(s_background_layer);
-	text_layer_destroy(s_time_layer);
-	text_layer_destroy(title_layer);
-	text_layer_destroy(station1_layer);
-	text_layer_destroy(station2_layer);
-	fonts_unload_custom_font(s_time_font_48);
-}
 
 static void update_proc_train_countdown(Layer *layer, GContext *ctx) {
 	//GRect bounds = layer_get_bounds(layer);
@@ -632,16 +542,20 @@ static void trainInfo_window_load(Window *trainInfo_window) {
 	layer_add_child(window_get_root_layer(trainInfo_window), text_layer_get_layer(s_train_station2_layer));
 
 	// Create train navigation schedule layer
-	s_train_nav_up_layer = bitmap_layer_create(
-	  GRect(PBL_IF_ROUND_ELSE(121, 126), PBL_IF_ROUND_ELSE(25, 16), 18, 42));
+	s_train_nav_up_layer = bitmap_layer_create(GRect(126, 16, 18, 42));
 	bitmap_layer_set_bitmap(s_train_nav_up_layer, gbitmap_create_with_resource(RESOURCE_ID_IMAGE_TRAIN_NAV_SCHEDULE));
 	//bitmap_layer_set_background_color(s_train_nav_up_layer, GColorClear);
 	bitmap_layer_set_compositing_mode(s_train_nav_up_layer, GCompOpSet);
 	layer_add_child(window_get_root_layer(trainInfo_window), bitmap_layer_get_layer(s_train_nav_up_layer));
 	
+	// Create train navigation select direction layer
+	s_train_nav_select_layer = bitmap_layer_create(GRect(126, 82, 18, 18));
+	bitmap_layer_set_bitmap(s_train_nav_select_layer, gbitmap_create_with_resource(RESOURCE_ID_IMAGE_TRAIN_NAV_REFRESH));
+	bitmap_layer_set_compositing_mode(s_train_nav_select_layer, GCompOpSet);
+	layer_add_child(window_get_root_layer(trainInfo_window), bitmap_layer_get_layer(s_train_nav_select_layer));
+	
 	// Create train navigation connect layer
-	s_train_nav_down_layer = bitmap_layer_create(
-	  GRect(PBL_IF_ROUND_ELSE(123, 126), PBL_IF_ROUND_ELSE(109, 114), 18, 42));
+	s_train_nav_down_layer = bitmap_layer_create(GRect(126, 114, 18, 42));
 	//bitmap_layer_set_bitmap(s_train_nav_down_layer, gbitmap_create_with_resource(RESOURCE_ID_IMAGE_TRAIN_NAV_CONNECT));
 	//bitmap_layer_set_background_color(s_train_nav_down_layer, GColorClear);
 	bitmap_layer_set_compositing_mode(s_train_nav_down_layer, GCompOpSet);
@@ -654,7 +568,7 @@ static void trainInfo_window_load(Window *trainInfo_window) {
 	window_stack_push(s_trainInfo_window, true);
 	
 	// Set click providers 
-	window_set_click_config_provider(s_trainInfo_window, (ClickConfigProvider) train_window_config_provider);
+	//window_set_click_config_provider(s_trainInfo_window, (ClickConfigProvider) train_window_config_provider);
 }
 
 static void trainInfo_window_unload(Window *trainInfo_window) {
@@ -673,6 +587,7 @@ static void trainInfo_window_unload(Window *trainInfo_window) {
 	text_layer_destroy(s_train_arriveTime_layer);
 	text_layer_destroy(s_train_station2_layer);
 	bitmap_layer_destroy(s_train_nav_up_layer);
+	bitmap_layer_destroy(s_train_nav_select_layer);
 	bitmap_layer_destroy(s_train_nav_down_layer);
 }
 
@@ -687,12 +602,7 @@ static void trainSchedule_window_load(Window *trainSchedule_window) {
 	// Create the scroll layer
 	s_trainSchedule_scroll_layer = scroll_layer_create(bounds);
 	scroll_layer_set_click_config_onto_window(s_trainSchedule_scroll_layer, trainSchedule_window);
-/*	
-	// Scrolls through text on a round screen by page (scroll offset is changed by frame's height)
-	#ifdef PBL_ROUND
-		scroll_layer_set_paging(s_trainSchedule_scroll_layer, true);
-	#endif
-*/	
+
 	// Create title layer
 	s_trainSchedule_title_layer = text_layer_create(GRect(0,-2,144,30));
 	text_layer_set_background_color(s_trainSchedule_title_layer, GColorBlack);
@@ -712,26 +622,6 @@ static void trainSchedule_window_load(Window *trainSchedule_window) {
 	scroll_layer_add_child(s_trainSchedule_scroll_layer, text_layer_get_layer(s_trainSchedule_title_layer));
 	scroll_layer_add_child(s_trainSchedule_scroll_layer, text_layer_get_layer(s_trainSchedule_text_layer));
 	layer_add_child(window_get_root_layer(trainSchedule_window), scroll_layer_get_layer(s_trainSchedule_scroll_layer));
-/*	
-	// Fit the text to the round screen with inset around edge of screen
-	#ifdef PBL_ROUND
-		text_layer_set_text_alignment(s_trainSchedule_text_layer, GTextAlignmentCenter);
-		uint8_t inset = 4;
-		text_layer_enable_screen_text_flow_and_paging(s_trainSchedule_text_layer, inset);
-	#endif
-*/	
-/*	
-	// Trim text layer and scroll content to fit text box
-	GSize max_size = text_layer_get_content_size(s_trainSchedule_text_layer);
-	text_layer_set_size(s_trainSchedule_text_layer, max_size);
-	scroll_layer_set_content_size(s_trainSchedule_scroll_layer,  GSize(bounds.size.w, max_size.h + 4));
-*/
- /* 
-	text_layer_set_background_color(s_trainSchedule_text_layer, GColorClear);
-	text_layer_set_text_color(s_trainSchedule_text_layer, GColorWhite);
-	text_layer_set_text_alignment(s_trainSchedule_text_layer, GTextAlignmentLeft);
-	text_layer_set_overflow_mode(s_trainSchedule_text_layer, GTextOverflowModeWordWrap);
-*/	
 
 	// Display the window
 	window_stack_push(s_trainSchedule_window, true);
@@ -776,39 +666,41 @@ static void init() {
   		// Remember the default value until the user chooses their own value
   		persist_write_string(keyStation2, station2_buffer);
 	}
-	
-	// Create main Window element and assign to pointer
-	s_main_window = window_create();
-	window_set_background_color(s_main_window, GColorWhite);
 
+
+	// Create the train info window 
+	s_trainInfo_window = window_create();
 	// Set handlers to manage the elements inside the Window
-	window_set_window_handlers(s_main_window, (WindowHandlers) {
-		.load = main_window_load,
-		.unload = main_window_unload
+	window_set_window_handlers(s_trainInfo_window, (WindowHandlers) {
+		.load = trainInfo_window_load,
+		.unload = trainInfo_window_unload
 	});
-
+	
 	// Show the Window on the watch, with animated=true
-	window_stack_push(s_main_window, false);
-
+	window_stack_push(s_trainInfo_window, true);
+	
 	// Set click providers 
-	window_set_click_config_provider(s_main_window, (ClickConfigProvider) config_provider);
+	window_set_click_config_provider(s_trainInfo_window, (ClickConfigProvider) train_window_config_provider);
 	
 	// Register callbacks
 	app_message_register_inbox_received(inbox_received_callback);
 	app_message_register_inbox_dropped(inbox_dropped_callback);
 	app_message_register_outbox_failed(outbox_failed_callback);
 	app_message_register_outbox_sent(outbox_sent_callback);
-
+	
 	// Open AppMessage
 	//app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
 	app_message_open(512, 64);
 	
-	// Create the train info window 
-	s_trainInfo_window = window_create();
-	window_set_window_handlers(s_trainInfo_window, (WindowHandlers) {
-		.load = trainInfo_window_load,
-		.unload = trainInfo_window_unload
-	});
+	// Fetch initial data
+	p_departStation = station1;
+	p_arriveStation = station2;
+	
+		printf("%s", "Fetching initial data");
+		printf("p_departStation: %s", p_departStation);
+		printf("p_arriveStation: %s \n", p_arriveStation);
+		
+	fetchData(p_departStation, p_arriveStation, 1);
 	
 	
 	// Create the train schedule window 
@@ -825,8 +717,7 @@ static void init() {
 }
 
 static void deinit() {
-	// Destroy Window
-	window_destroy(s_main_window);
+	// Destroy windows
 	window_destroy(s_trainInfo_window);
 	window_destroy(s_trainSchedule_window);
 }
