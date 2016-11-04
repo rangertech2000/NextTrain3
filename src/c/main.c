@@ -203,6 +203,9 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 		//text_layer_set_text(s_train_arriveTime_layer, train_number_buffer);
 		text_layer_set_text(s_train_number_layer, train_number_buffer);
 		text_layer_set_text(s_train_station2_layer, p_arriveStation);
+		
+		// Refresh the window
+		window_stack_push(s_trainInfo_window, false);
 	}
 	else {
 		printf("Inbox: No train data returned");
@@ -220,9 +223,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 		text_layer_set_text(s_train_arriveConnect_layer, "Connect at");
 		bitmap_layer_set_bitmap(s_train_nav_down_layer, gbitmap_create_with_resource(RESOURCE_ID_IMAGE_TRAIN_NAV_CONNECT_1));
 	
+	//Refresh the window
+	window_stack_push(s_trainInfo_window, false);
 	}
-	// Refresh the window
-	//window_stack_push(s_trainInfo_window, false);
+
 	
 	// If schedule is available, use it
 	if (schedule_tuple) {
@@ -457,7 +461,7 @@ static void trainInfo_window_load(Window *trainInfo_window) {
 	text_layer_set_text_color(s_train_departTime_layer, GColorWhite);
 	text_layer_set_text_alignment(s_train_departTime_layer, GTextAlignmentLeft);
 	text_layer_set_overflow_mode(s_train_departTime_layer, GTextOverflowModeWordWrap);
-	text_layer_set_text(s_train_departTime_layer, "Loading...");
+	text_layer_set_text(s_train_departTime_layer, "Connecting...");
 	layer_add_child(window_get_root_layer(trainInfo_window), text_layer_get_layer(s_train_departTime_layer));
 	
 	// Create countdown label layer
